@@ -38,15 +38,17 @@ def read_contents(file_path):
 # Parsing function
 
 def parse_market_json(url, api_key=None):
+    # Attempt standard JSON parse
     try:
         # Construct headers if an API key is provided
+        headers = {}
         if api_key:
             headers = {"Authorization": f"Bearer {api_key}"}
 
         response = requests.get(url, headers=headers)
         response.raise_for_status()
 
-        # Attempt standard JSON parse
+        
         return response.json()
     
     except json.JSONDecodeError:
