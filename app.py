@@ -1,28 +1,56 @@
+import os
 import json
 import pandas as pd
 import plotly.express as px
 import requests
 import streamlit as st
 
-# -----------------------------------------------------------------------------
-# 1. CORE PARSING FUNCTION (With API Key Support)
-# -----------------------------------------------------------------------------
 
+# File reading function
+
+def read_contents(file_path):
+
+    # Check if path exists
+    if os.path.exists(file_path):
+        try:
+            # Read file contents
+            with open(file_path, "r") as file:
+                contents = file.read()
+
+            # Standardise Python/JS boolean capitalization
+            fixed_contents = contents.replace(": True", ": true").replace(
+                ": False", ": false"
+            )
+
+            # Convert text into Python dictionary/JSON object
+            return json.loads(fixed_contents)
+
+        except Exception as e:
+            st.error(f"Error reading or parsing local file: {e}")
+            return None
+        
+    # If no path exists
+    else:
+        st.error(f"File path does not exist: {file_path}")
+        return None
+    
+
+# Parsing function
 
 def parse_market_json(url, api_key=None):
     try:
         # Construct headers if an API key is provided
-        headers = {}
         if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
+            headers = {"Authorization": f"Bearer {api_key}"}
 
         response = requests.get(url, headers=headers)
         response.raise_for_status()
 
         # Attempt standard JSON parse
         return response.json()
+    
     except json.JSONDecodeError:
-        # Fallback for Python-style capitalization anomalies (e.g., ": True")
+        # Standardise boolean capitalization
         raw_text = response.text
         fixed_text = raw_text.replace(": True", ": true").replace(
             ": False", ": false"
@@ -37,9 +65,8 @@ def parse_market_json(url, api_key=None):
         return None
 
 
-# -----------------------------------------------------------------------------
-# 2. STREAMLIT UI LAYOUT & CONFIGURATION
-# -----------------------------------------------------------------------------
+# Streamlit layout and config
+
 st.set_page_config(
     page_title="Market Analytics Dashboard", page_icon="📊", layout="wide"
 )
@@ -49,40 +76,56 @@ st.markdown(
     "Fetch, filter, and visualize real-time asset market schedules with custom API integration."
 )
 
-# --- Sidebar Configuration Panel ---
-st.sidebar.header("⚙️ Configuration & Auth")
 
-default_url = "https://s.yimg.com/uc/finance/cosaic/temporaryAssets/us_market_6.0.45.json?origin=ca.finance.yahoo.com"
-url_input = st.sidebar.text_input("Data Source URL:", value=default_url)
+# Sidebar
+st.sidebar.header("⚙️ Data Source Selection")
 
-# API Key input field (masked for security)
-api_key_input = st.sidebar.text_input(
-    "API Key (Optional):", type="password", help="Passes key into Bearer Headers"
+# Toggle between URL or local file data
+source_type = st.sidebar.radio(
+    "Choose Data Input Source:", ("Remote URL API", "Local System File")
 )
 
-# Real-time Refresh controls
+# Render inputs based on toggle choice
+if source_type == "Remote URL API":
+    default_url = "https://s.yimg.com/uc/finance/cosaic/temporaryAssets/us_market_6.0.45.json?origin=ca.finance.yahoo.com"
+    url_input = st.sidebar.text_input("Data Source URL:", value=default_url)
+    api_key_input = st.sidebar.text_input(
+        "API Key (Optional):", type="password"
+    )
+else:
+    # Set default to look for local json file in project directory
+    file_input = st.sidebar.text_input(
+        "File Name or Full System Path:", value="us_market.json"
+    )
+
+# Refresh button
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔄 Live Actions")
-refresh_clicked = st.sidebar.button("🔄 Refresh Live Data", type="primary")
+refresh_clicked = st.sidebar.button("🔄 Sync & Refresh Data", type="primary")
 
-# Initialize session state for tracking data updates dynamically
+# Initialize session state
 if "market_data" not in st.session_state:
     st.session_state.market_data = None
 
-# Trigger fetch on initial app load OR when refresh button is pressed
+# Load via URL vs local file
 if st.session_state.market_data is None or refresh_clicked:
-    with st.spinner("Fetching live data streams..."):
-        st.session_state.market_data = parse_market_json(
-            url_input, api_key_input
-        )
-        if refresh_clicked and st.session_state.market_data:
-            st.toast("Data refreshed successfully!", icon="✅")
+    with st.spinner("Processing data stream target..."):
+        if source_type == "Remote URL API":
+            st.session_state.market_data = parse_market_json(
+                url_input, api_key_input
+            )
+        else:
+            st.session_state.market_data = read_contents(file_input)
 
-# --- Main Dashboard Display ---
+        if refresh_clicked and st.session_state.market_data:
+            st.toast("Dashboard layout synchronized!", icon="✅")
+
+
+# Main dashboard
 data = st.session_state.market_data
 
 if data:
-    # Metadata Metrics Card row
+    # Metadata overview
     st.subheader("📋 Market Metadata")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -97,17 +140,12 @@ if data:
 
     st.markdown("---")
 
-    # Rules Array Processing
+    # Interactive plots processing
     rules = data.get("rules", [])
     if rules:
         df = pd.DataFrame(rules)
 
-        # -----------------------------------------------------------------------------
-        # 3. PLOTLY VISUALIZATION COMPONENT
-        # -----------------------------------------------------------------------------
         st.subheader("📈 Visual Data Analysis")
-
-        # Map day integers to clean readable string values for graphs
         day_map = {
             1: "Monday",
             2: "Tuesday",
@@ -123,9 +161,7 @@ if data:
             weekly_df["day_name"] = weekly_df["dayofweek"].map(day_map)
             weekly_df["name"] = weekly_df["name"].fillna("regular")
 
-            # Chart 1: Distribution of trading sessions by day
             g1, g2 = st.columns(2)
-
             with g1:
                 st.markdown("#### Trading Sessions Active per Weekday")
                 fig_bar = px.bar(
@@ -153,13 +189,13 @@ if data:
 
         st.markdown("---")
 
-        # --- Data Presentation Tables ---
+        # Tab Sheets
         st.subheader("🕒 Detailed Schedule Split")
         tab1, tab2, tab3 = st.tabs(
             [
                 "Weekly Recurring Schedule",
                 "Specific Calendar Dates / Holidays",
-                "Raw JSON Stream",
+                "Raw Data Payload View",
             ]
         )
 
@@ -170,7 +206,7 @@ if data:
                     use_container_width=True,
                 )
             else:
-                st.info("No recurring weekly 'dayofweek' rules found.")
+                st.info("No recurring weekly schedule segments present.")
 
         with tab2:
             if "date" in df.columns:
@@ -181,14 +217,15 @@ if data:
                         use_container_width=True,
                     )
                 else:
-                    st.info("No historical exception dates found.")
+                    st.info("No localized date exceptions found.")
             else:
-                st.info("No calendar exception dates found.")
+                st.info("No specific operational calendar filters found.")
 
         with tab3:
             st.json(data)
     else:
-        st.warning("No operational schedules ('rules') found inside this file.")
+        st.warning("JSON parsed successfully, but structural rules are empty.")
 else:
-    st.info("Provide a valid configuration setup and click 'Refresh Live Data'.")
-    
+    st.info(
+        "Select an option on the sidebar panel to load the layout visualizations."
+    )
