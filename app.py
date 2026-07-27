@@ -89,7 +89,7 @@ source_type = st.sidebar.radio(
 
 # Render inputs based on toggle choice
 if source_type == "Remote URL API":
-    default_url = "https://s.yimg.com/uc/finance/cosaic/temporaryAssets/us_market_6.0.45.json?origin=ca.finance.yahoo.com"
+    default_url = "https://"#"https://s.yimg.com/uc/finance/cosaic/temporaryAssets/us_market_6.0.45.json?origin=ca.finance.yahoo.com"
     url_input = st.sidebar.text_input("Data Source URL:", value=default_url)
     api_key_input = st.sidebar.text_input(
         "API Key (Optional):", type="password"
