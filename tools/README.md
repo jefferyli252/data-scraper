@@ -1,5 +1,0 @@
-- Conda for python
-- Why virtual enviroments created / why to use them.
-- understand how regex101 works
-- graphql
-- python requests
