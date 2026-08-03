@@ -8,13 +8,18 @@ TBD
 
 # How to run the project
 
+`python -m streamlit run app.py`
+
 ## Dependencies
 
 > Check if you have the following dependencies installed in your system. If not, please install them.
-- Conda for python
-- python virtual enviroments
-- graphql
-- python requests
+- Python virtual enviroment
+- streamlit
+- requests
+- pandas
+- plotly
+- beautifulsoup
+- lxml
 
 # How to contribute to the project
 

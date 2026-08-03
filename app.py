@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 import requests
 import streamlit as st
+from bs4 import BeautifulSoup
 
 
 # File reading function
@@ -67,6 +68,50 @@ def parse_market_json(url, api_key=None):
         return None
 
 
+# Beatifulsoup HTML data scraper
+
+def scrape_html_tables(url):
+    """Scrapes raw HTML from a target web page and extracts all <table> elements
+
+    into a list of Pandas DataFrames using BeautifulSoup.
+    """
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/115.0.0.0 Safari/537.36"
+        )
+    }
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        # Parse raw HTML content using BeautifulSoup
+        soup = BeautifulSoup(response.text, "lxml")
+        tables = soup.find_all("table")
+
+        if not tables:
+            st.warning("No HTML <table> elements were found on this web page.")
+            return None
+
+        # Convert each BeautifulSoup <table> tag into a Pandas DataFrame
+        scraped_dfs = []
+        for index, table in enumerate(tables):
+            try:
+                # pd.read_html can take the string representation of a BS4 table
+                df_list = pd.read_html(str(table))
+                if df_list:
+                    scraped_dfs.append(df_list[0])
+            except Exception:
+                continue
+
+        return scraped_dfs if scraped_dfs else None
+
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to scrape website: {e}")
+        return None
+
+
 # Streamlit layout and config
 
 st.set_page_config(
@@ -84,7 +129,7 @@ st.sidebar.header("⚙️ Data Source Selection")
 
 # Toggle between URL or local file data
 source_type = st.sidebar.radio(
-    "Choose Data Input Source:", ("Remote URL API", "Local System File")
+    "Choose Data Input Source:", ("Remote URL API", "Local System File", "HTML Data Scraper")
 )
 
 # Render inputs based on toggle choice
@@ -94,10 +139,17 @@ if source_type == "Remote URL API":
     api_key_input = st.sidebar.text_input(
         "API Key (Optional):", type="password"
     )
-else:
+elif source_type == "Local System File":
     # Set default to look for local json file in project directory
     file_input = st.sidebar.text_input(
         "File Name or Full System Path:", value="us_market.json"
+    )
+else:
+    default_scrape_url = (
+        "https://"#https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    )
+    scrape_url_input = st.sidebar.text_input(
+        "Target Website URL to Scrape:", value=default_scrape_url
     )
 
 # Refresh button
@@ -116,8 +168,10 @@ if st.session_state.market_data is None or refresh_clicked:
             st.session_state.market_data = parse_market_json(
                 url_input, api_key_input
             )
-        else:
+        elif source_type == "Local System File":
             st.session_state.market_data = read_contents(file_input)
+        else:
+            st.session_state.market_data = scrape_html_tables(scrape_url_input)
 
         if refresh_clicked and st.session_state.market_data:
             st.toast("Dashboard layout synchronized!", icon="✅")
@@ -128,7 +182,33 @@ data = st.session_state.market_data
 
 if data:
     
-    if isinstance(data, list):
+    if (isinstance(data, list)
+        and len(data) > 0
+        and isinstance(data[0], pd.DataFrame)):
+        # If data is HTML scraped data
+        st.subheader("🌐 Scraped HTML Data Tables")
+        st.info(f"Successfully scraped **{len(data)}** table(s) from the page.")
+
+        # Let the user pick which table to inspect if multiple exist
+        selected_table_idx = st.selectbox(
+            "Select Scraped Table to View:",
+            options=range(len(data)),
+            format_func=lambda x: f"Table #{x + 1} ({data[x].shape[0]} rows × {data[x].shape[1]} cols)",
+        )
+
+        scraped_df = data[selected_table_idx]
+        st.dataframe(scraped_df, use_container_width=True)
+
+        # Download button for the scraped table
+        csv = scraped_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📥 Download Table as CSV",
+            data=csv,
+            file_name=f"scraped_table_{selected_table_idx + 1}.csv",
+            mime="text/csv",
+        )
+
+    elif isinstance(data, list):
         # If data is list, convert to pandas dataframe
         st.subheader("📋 Tabular Dataset Preview")
         df = pd.DataFrame(data)
