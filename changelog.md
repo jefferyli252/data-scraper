@@ -11,3 +11,8 @@ Notable changes to this project will be documented in this file.
 
 ### Added
 - Support for list data, not just dictionaries
+
+## - 2026-08-02
+
+### Added
+- HTML data scraping
