@@ -16,3 +16,14 @@ Notable changes to this project will be documented in this file.
 
 ### Added
 - HTML data scraping
+
+## - 2026-08-06
+
+### Changed
+- Moved functions to separate file
+- Organizational changes
+
+## - 2026-08-20
+
+### Added
+- .gitignore and docker-compose files
