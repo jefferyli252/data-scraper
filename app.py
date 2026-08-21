@@ -1,10 +1,4 @@
-import os
-import json
-import pandas as pd
-import plotly.express as px
-import requests
-import streamlit as st
-from bs4 import BeautifulSoup
+from functions import *
 
 
 # Streamlit layout and config

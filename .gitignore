@@ -1,0 +1,30 @@
+# --- Python Virtual Environments ---
+.venv/
+venv/
+ENV/
+env/
+
+# --- Operating System Cache ---
+.DS_Store
+Thumbs.db
+
+# --- Python Cache & Compilations ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# --- Streamlit Internal Runtime State ---
+.streamlit/config.toml
+.streamlit/secrets.toml
+
+# --- IDE / Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Package Management Lockfiles ---
+.uv/
