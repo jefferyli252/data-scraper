@@ -2,5 +2,5 @@ streamlit
 requests
 pandas
 plotly
-beautifulsoup
+beautifulsoup4
 lxml

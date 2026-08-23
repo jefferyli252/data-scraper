@@ -1,14 +1,23 @@
 # About the project
 
-TBD
+Data scraping web application that displays organized data from file paths.
 
 # How it works
 
-TBD
+Reads raw HTML or file data, converts to Pandas dataframes, and displays organized data with visuals.
 
 # How to run the project
 
+Without Docker compose:
+
 `python -m streamlit run app.py`
+
+With Docker:
+
+`docker compose up`
+
+To stop, run
+`docker compose down`
 
 ## Dependencies
 
@@ -20,6 +29,8 @@ TBD
 - plotly
 - beautifulsoup
 - lxml
+
+- Docker Desktop
 
 # How to contribute to the project
 
