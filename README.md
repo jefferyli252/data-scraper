@@ -31,7 +31,3 @@ To stop, run
 - lxml
 
 - Docker Desktop
-
-# How to contribute to the project
-
-TBD
